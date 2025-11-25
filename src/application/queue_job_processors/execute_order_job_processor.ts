@@ -50,7 +50,7 @@ export class ExecuteOrderJobProcessor {
                 throw new Error(errorMessage);
             }
             else if (!(err instanceof Error)) {
-                throw new Error((err as any).toString());
+                throw new Error(JSON.stringify(err as any));
             }
 
             throw err;
@@ -80,5 +80,8 @@ function mapToDomainFailureReason(reason: ExecuteOrderExceptionType): OrderFailu
         
         case ExecuteOrderExceptionType.slippage:
             return OrderFailureReason.slippage;
+
+        case ExecuteOrderExceptionType.transactionFailed:
+            return OrderFailureReason.transactionFailed;
     }
 }

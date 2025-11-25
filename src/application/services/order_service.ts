@@ -23,7 +23,7 @@ export class OrderService {
             tokenOut: tokenOut.toBase58(), 
             amount: amount.toJSON(),
         };
-        this.orderQueue.add('execute_order', jobData, { jobId });
+        this.orderQueue.add('execute_order', jobData, { jobId, attempts: 3 });
         
         return order.id;
     }

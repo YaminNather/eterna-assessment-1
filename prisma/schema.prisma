@@ -49,6 +49,7 @@ enum OrderStatus {
 enum OrderFailureReason {
   NOPOOLSFOUND
   SLIPPAGE
+  TRANSACTIONFAILED
 }
 
 enum Dex {

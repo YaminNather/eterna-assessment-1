@@ -45,16 +45,7 @@ export class OrderExecutor {
         this.logger.info({ orderId }, 'Routing to the best possible pool');
 
         let quote: Quote | null;
-        try {
-            quote = await this.dexRouter.findBestValueDexForOrder(tokenIn, tokenOut, amount);
-        }
-        catch (e) {
-            if (e instanceof Error) {
-                this.logger.error({ orderId, err: e }, 'Find best value dex failed');
-            }
-            
-            throw e;
-        }
+        quote = await this.dexRouter.findBestValueDexForOrder(tokenIn, tokenOut, amount);
 
         if (!quote) {
             const error = new ExecuteOrderException(ExecuteOrderExceptionType.noPoolAvailable, "Could not find a pool meeting requirements");
@@ -82,10 +73,7 @@ export class OrderExecutor {
             transactionHash = await dex.swap(payer, payerSecret, new PublicKey(quote.poolId), new PublicKey(tokenIn), quote);
         }
         catch (e) {
-            if (e instanceof Error) {
-                this.logger.error({ orderId, err: e }, 'Failed to send swap transaction');
-            }
-
+            this.logger.error({ orderId, err: e }, 'Failed to send swap transaction');
             throw e;
         }
         progressCallback(ExecuteOrderStatus.submitted);
@@ -100,11 +88,9 @@ export class OrderExecutor {
             confirmationResult = await dex.confirmTransaction(transactionHash, tokenIn, tokenOut);
         }
         catch (e) {
-            if (e instanceof Error) {
-                this.logger.error({ orderId, err: e}, 'Swap failed');
-            }
-
-            throw e;
+            this.logger.error({ orderId, err: e}, 'Transaction failed');
+            
+            throw new ExecuteOrderException(ExecuteOrderExceptionType.transactionFailed, "Transaction Failed");
         }
         this.logger.info({ orderId, transactionHash, amountIn: confirmationResult.amountIn, amountOut: confirmationResult.amountOut }, "Swap Transaction confirmed");
         
@@ -125,7 +111,8 @@ export enum ExecuteOrderStatus {
 
 export enum ExecuteOrderExceptionType {
     noPoolAvailable = "no_pool_available",
-    slippage = "slippage"
+    slippage = "slippage",
+    transactionFailed = "transaction_failed",
 }
 
 export class ExecuteOrderException extends Error {

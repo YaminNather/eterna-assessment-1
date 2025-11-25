@@ -13,6 +13,7 @@ import { Queue, QueueEvents } from 'bullmq';
 import { ExecuteOrderJobProcessor } from './application/queue_job_processors/execute_order_job_processor.js';
 import { RaydiumDexAdapter } from './infrastructure/dexes/raydium_dex_adapter.js';
 import { prisma } from './prisma.js';
+import { OrderProgressBuffer } from './application/services/order_progress_buffer.js';
 
 export function setupDiContainer() {
     diContainer.options.injectionMode = InjectionMode.CLASSIC;
@@ -33,6 +34,7 @@ export function setupDiContainer() {
         orderRepository: asClass(PrismaOrderRepository).singleton(),
         orderService: asClass(OrderService).singleton(),
         orderExecutor: asClass(OrderExecutor).singleton(),
+        orderProgressBuffer: asClass(OrderProgressBuffer).singleton(),
         
         executeOrderJobProcessor: asClass(ExecuteOrderJobProcessor),
         orderQueue: asFunction(() => new Queue('order_queue')).singleton(),

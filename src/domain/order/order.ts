@@ -126,6 +126,7 @@ export enum OrderStatus {
 export enum OrderFailureReason {
     noPoolsFound = "no_pools_found",
     slippage = "slippage",
+    transactionFailed = "transaction_failed",
 }
 
 export class OrderAlreadyCompletedException extends Error {

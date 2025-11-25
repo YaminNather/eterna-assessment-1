@@ -20,7 +20,8 @@ export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus]
 
 export const OrderFailureReason = {
   NOPOOLSFOUND: 'NOPOOLSFOUND',
-  SLIPPAGE: 'SLIPPAGE'
+  SLIPPAGE: 'SLIPPAGE',
+  TRANSACTIONFAILED: 'TRANSACTIONFAILED'
 } as const
 
 export type OrderFailureReason = (typeof OrderFailureReason)[keyof typeof OrderFailureReason]

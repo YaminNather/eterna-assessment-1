@@ -2,15 +2,36 @@ import { diContainer } from "@fastify/awilix";
 import { QueueEvents } from "bullmq";
 import type { FastifyRequest } from "fastify";
 import type WebSocket from "ws";
+import type { OrderProgressBuffer } from "../../../application/services/order_progress_buffer.js";
 
 export const progressRoute = '/progress';
 
 export function progressRouteHandler(socket: WebSocket, request: FastifyRequest) {
     const queueEvents = diContainer.resolve<QueueEvents>("queueEvents");
+    const orderProgressBuffer = diContainer.resolve<OrderProgressBuffer>('orderProgressBuffer');
 
-    const orderId = request.query.order_id;
+    const orderId = (request.query as { order_id?: string }).order_id as string;
     
-    queueEvents.on('waiting', ({ jobId, prev }) => {
+    // First, send all buffered events for this order
+    const bufferedEvents = orderProgressBuffer.getEvents(orderId);
+    if (bufferedEvents.length > 0) {
+        request.log.info({ orderId, count: bufferedEvents.length }, 'Sending buffered events');
+        
+        for (const event of bufferedEvents) {
+            try {
+                if (event.type === 'failed') {
+                    socket.send(event.data);
+                } else {
+                    socket.send(JSON.stringify(event.data));
+                }
+            } catch (err) {
+                request.log.error({ orderId, err }, 'Failed to send buffered event');
+            }
+        }
+    }
+    
+    // Now listen for new events
+    queueEvents.on('waiting', ({ jobId }) => {
         if (!isCurrentOrdersJob(jobId, orderId)) {
             return;
         }
@@ -38,7 +59,7 @@ export function progressRouteHandler(socket: WebSocket, request: FastifyRequest)
         socket.close();
     });
 
-    queueEvents.on('completed', ({ jobId, returnvalue, prev }) => {
+    queueEvents.on('completed', ({ jobId, returnvalue }) => {
         if (!isCurrentOrdersJob(jobId, orderId)) {
             return;
         }

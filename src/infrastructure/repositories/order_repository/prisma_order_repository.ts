@@ -127,6 +127,8 @@ function mapFailureReasonToDb(domainModel: OrderFailureReason): OrderFailureReas
             return OrderFailureReasonDb.NOPOOLSFOUND;
         case OrderFailureReason.slippage:
             return OrderFailureReasonDb.SLIPPAGE;
+        case OrderFailureReason.transactionFailed:
+            return OrderFailureReasonDb.TRANSACTIONFAILED;
     }
 }
 
@@ -136,6 +138,8 @@ function mapFailureReasonFromDb(db: OrderFailureReasonDb): OrderFailureReason {
             return OrderFailureReason.noPoolsFound;
         case OrderFailureReasonDb.SLIPPAGE:
             return OrderFailureReason.slippage;
+        case OrderFailureReasonDb.TRANSACTIONFAILED:
+            return OrderFailureReason.transactionFailed;
     }
 }
 
