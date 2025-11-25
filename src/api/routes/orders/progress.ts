@@ -1,3 +1,4 @@
+import { diContainer } from "@fastify/awilix";
 import { QueueEvents } from "bullmq";
 import type { FastifyRequest } from "fastify";
 import type WebSocket from "ws";
@@ -5,11 +6,11 @@ import type WebSocket from "ws";
 export const progressRoute = '/progress';
 
 export function progressRouteHandler(socket: WebSocket, request: FastifyRequest) {
-    const orderId = request.query.order_id;
+    const queueEvents = diContainer.resolve<QueueEvents>("queueEvents");
 
-    const orderEvents = new QueueEvents("order_queue");
+    const orderId = request.query.order_id;
     
-    orderEvents.on('waiting', ({ jobId, prev }) => {
+    queueEvents.on('waiting', ({ jobId, prev }) => {
         if (!isCurrentOrdersJob(jobId, orderId)) {
             return;
         }
@@ -20,7 +21,7 @@ export function progressRouteHandler(socket: WebSocket, request: FastifyRequest)
         return socket.send(message);
     });
 
-    orderEvents.on('progress', ({ jobId, data }) => {
+    queueEvents.on('progress', ({ jobId, data }) => {
         if (!isCurrentOrdersJob(jobId, orderId)) {
             return;
         }
@@ -28,7 +29,7 @@ export function progressRouteHandler(socket: WebSocket, request: FastifyRequest)
         socket.send(JSON.stringify(data));
     });
     
-    orderEvents.on('failed', ({ jobId, failedReason }) => {
+    queueEvents.on('failed', ({ jobId, failedReason }) => {
         if (!isCurrentOrdersJob(jobId, orderId)) {
             return;
         }
@@ -37,7 +38,7 @@ export function progressRouteHandler(socket: WebSocket, request: FastifyRequest)
         socket.close();
     });
 
-    orderEvents.on('completed', ({ jobId, returnvalue, prev }) => {
+    queueEvents.on('completed', ({ jobId, returnvalue, prev }) => {
         if (!isCurrentOrdersJob(jobId, orderId)) {
             return;
         }

@@ -39,7 +39,7 @@ export class RaydiumDexAdapter implements Dex {
                 pool.creatorFeesMintA,
                 pool.protocolFeesMintB,
                 pool.fundFeesMintA,
-                false,
+                tokenIn === pool.mintA,
             );
             
             const quote: Quote = {
@@ -79,7 +79,7 @@ export class RaydiumDexAdapter implements Dex {
             pool.rpcData.creatorFeesMintA,
             pool.rpcData.protocolFeesMintB,
             pool.rpcData.fundFeesMintA,
-            false,
+            tokenIn.toBase58() === pool.poolInfo.mintA.address,
         );
 
         const { execute, transaction } = await raydium.cpmm.swap({
@@ -88,7 +88,7 @@ export class RaydiumDexAdapter implements Dex {
             inputAmount: quote.inputAmount,
             swapResult,
             slippage: 0.005,
-            baseIn: true,
+            baseIn: tokenIn.toBase58() === pool.poolInfo.mintA.address,
 
             txVersion: TxVersion.V0,
         });

@@ -24,7 +24,7 @@ export class ExecuteOrderJobProcessor {
         let result: OrderExecutorResult;
         try {
             result = await this.orderExecutor.executeOrder(orderId, tokenIn, tokenOut, amount, async (status, details) => {
-                await job.updateProgress({
+                job.updateProgress({
                     status,
                     details,
                 });
@@ -48,6 +48,9 @@ export class ExecuteOrderJobProcessor {
                 });
                 
                 throw new Error(errorMessage);
+            }
+            else if (!(err instanceof Error)) {
+                throw new Error((err as any).toString());
             }
 
             throw err;
