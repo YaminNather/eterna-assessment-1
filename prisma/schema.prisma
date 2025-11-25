@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model SwapOrder {
+  @@map("swap_order")
+
+  id String @id
+
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  
+  status OrderStatus
+
+  tokenInId String @map("token_in_id")
+  tokenInDecimal Int @map("token_in_decimal")
+  tokenOutId String @map("token_out_id")
+  tokenOutDecimal Int @map("token_out_decimal")
+  amountIn BigInt   @map("amount_in")
+
+  
+  transactionHash String? @map("transaction_hash")
+  dexId Dex? @map("dex_id")
+  poolId String? @map("pool_id")
+  finalAmountIn BigInt?   @map("final_amount_in")
+  finalAmountOut BigInt?   @map("final_amount_out")
+
+  confirmedAt DateTime? @map("confirmed_at") @db.Timestamp(0)
+  failureReason OrderFailureReason?
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum OrderFailureReason {
+  NOPOOLSFOUND
+  SLIPPAGE
+}
+
+enum Dex {
+  RAYDIUM
+  METEORA
+}

@@ -1,0 +1,139 @@
+import type { Logger } from "pino";
+import type { DexRouter } from "./dex_router.js";
+import type { Dex } from "./dex/dex.js";
+import type { DexRegistry } from "./dex_registry.js";
+import { PublicKey } from "@solana/web3.js";
+import bs58 from 'bs58';
+import BN from "bn.js";
+import type { Quote } from "./dex/quote.js";
+
+export interface OrderExecutorResult {
+    readonly dexId: string;
+    readonly poolId: PublicKey;
+    readonly transactionHash: string;
+    readonly amountIn: BN;
+    readonly amountOut: BN;
+}
+
+export class OrderExecutor {
+    constructor(
+        private readonly dexRegistry: DexRegistry,
+        private readonly dexRouter: DexRouter,
+        private readonly logger: Logger,
+    ) {}
+    
+    async executeOrder(orderId: string, tokenIn: PublicKey, tokenOut: PublicKey, amount: BN, progressCallback: ExecuteOrderProgressCallback): Promise<OrderExecutorResult> {
+        const quote: Quote = await this.routeToBestPool(orderId, tokenIn, tokenOut, amount, progressCallback);
+
+        const dex: Dex = this.dexRegistry.withId(quote.dexId);
+        
+        const transactionHash = await this.executeSwap(orderId, quote, dex, tokenIn, progressCallback);
+
+        const { amountIn, amountOut } = await this.confirmSwap(orderId, transactionHash, dex, tokenIn, tokenOut);
+
+        return { 
+            dexId: dex.id,
+            poolId: quote.poolId,
+            transactionHash,
+            amountIn,
+            amountOut,
+         };
+    }
+
+    private async routeToBestPool(orderId: string, tokenIn: PublicKey, tokenOut: PublicKey, amount: BN, progressCallback: ExecuteOrderProgressCallback): Promise<Quote> {
+        progressCallback(ExecuteOrderStatus.routing);
+        this.logger.info({ orderId }, 'Routing to the best possible pool');
+
+        let quote: Quote | null;
+        try {
+            quote = await this.dexRouter.findBestValueDexForOrder(tokenIn, tokenOut, amount);
+        }
+        catch (e) {
+            if (e instanceof Error) {
+                this.logger.error({ orderId, err: e }, 'Find best value dex failed');
+            }
+            
+            throw e;
+        }
+
+        if (!quote) {
+            const error = new ExecuteOrderException(ExecuteOrderExceptionType.noPoolAvailable, "Could not find a pool meeting requirements");
+            this.logger.error({ orderId, err: error }, error.message);
+
+            throw error;
+        }
+
+        this.logger.info({ orderId, ...quote }, 'Routed to the best pool');
+        
+        return quote;
+    }
+
+    private async executeSwap(orderId: string, quote: Quote, dex: Dex, tokenIn: PublicKey, progressCallback: ExecuteOrderProgressCallback): Promise<string> {
+        progressCallback(ExecuteOrderStatus.building); 
+        this.logger.info({orderId, dex_id: quote.dexId, pool_id: quote.poolId, }, 'Building swap transaction');
+        
+        const payer = new PublicKey("ENuSSFYwyU8Ygo1e6W2xs9ck39xNEt64yjmDMFw6JbtN");
+        const payerSecret = bs58.decode(
+            "mQfhs5hWNXQkDMp6mGRtS86VBNuMJ6FXa6hXqemasbn42atBBWrSt4kQStTgWSJziTW2pFgNYf6UFdo3aR8rb7g",
+        );
+
+        let transactionHash: string;
+        try {
+            transactionHash = await dex.swap(payer, payerSecret, new PublicKey(quote.poolId), new PublicKey(tokenIn), quote);
+        }
+        catch (e) {
+            if (e instanceof Error) {
+                this.logger.error({ orderId, err: e }, 'Failed to send swap transaction');
+            }
+
+            throw e;
+        }
+        progressCallback(ExecuteOrderStatus.submitted);
+        this.logger.info({orderId, dexId: quote.dexId, poolId: quote.poolId, amountIn: quote.inputAmountWithFees }, "Transaction submitted");
+
+        return transactionHash;
+    }
+
+    private async confirmSwap(orderId: string, transactionHash: string, dex: Dex, tokenIn: PublicKey, tokenOut: PublicKey): Promise<{amountIn: BN, amountOut: BN}> {
+        let confirmationResult;
+        try {
+            confirmationResult = await dex.confirmTransaction(transactionHash, tokenIn, tokenOut);
+        }
+        catch (e) {
+            if (e instanceof Error) {
+                this.logger.error({ orderId, err: e}, 'Swap failed');
+            }
+
+            throw e;
+        }
+        this.logger.info({ orderId, transactionHash, amountIn: confirmationResult.amountIn, amountOut: confirmationResult.amountOut }, "Swap Transaction confirmed");
+        
+        return {
+            amountIn: confirmationResult.amountIn,
+            amountOut: confirmationResult.amountOut,
+        };
+    }
+}
+
+export type ExecuteOrderProgressCallback = (status: ExecuteOrderStatus, data?: any) => void;
+
+export enum ExecuteOrderStatus {
+    routing = 'routing',
+    building = 'building',
+    submitted = 'submitted',
+} 
+
+export enum ExecuteOrderExceptionType {
+    noPoolAvailable = "no_pool_available",
+    slippage = "slippage"
+}
+
+export class ExecuteOrderException extends Error {
+    constructor(
+        readonly reason: ExecuteOrderExceptionType,
+        message: string, 
+        readonly details?: any,
+    ) {
+        super(message);
+    }
+}
