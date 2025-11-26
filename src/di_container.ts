@@ -9,11 +9,12 @@ import { Connection } from '@solana/web3.js';
 import { logger } from './logger.js';
 import type pino from 'pino';
 import { OrderService } from './application/services/order_service.js';
-import { Queue, QueueEvents } from 'bullmq';
+import { Queue, QueueEvents, RedisConnection } from 'bullmq';
 import { ExecuteOrderJobProcessor } from './application/queue_job_processors/execute_order_job_processor.js';
 import { RaydiumDexAdapter } from './infrastructure/dexes/raydium_dex_adapter.js';
 import { prisma } from './prisma.js';
 import { OrderProgressBuffer } from './application/services/order_progress_buffer.js';
+import Redis from 'ioredis';
 
 export function setupDiContainer() {
     diContainer.options.injectionMode = InjectionMode.CLASSIC;
@@ -23,6 +24,7 @@ export function setupDiContainer() {
             
         prisma: asValue(prisma),
 
+        redis: asValue<Redis>(new Redis(process.env.REDIS_URL as string, { maxRetriesPerRequest: null })),
         connection: asValue(new Connection("https://api.devnet.solana.com")),
         meteoraDexAdapter: asClass(MeteoraDexAdapter).singleton(),
         raydiumDexAdapter: asClass(RaydiumDexAdapter).singleton(),
@@ -37,8 +39,8 @@ export function setupDiContainer() {
         orderProgressBuffer: asClass(OrderProgressBuffer).singleton(),
         
         executeOrderJobProcessor: asClass(ExecuteOrderJobProcessor),
-        orderQueue: asFunction(() => new Queue('order_queue')).singleton(),
+        orderQueue: asFunction((redis: Redis) => new Queue('order_queue', { connection: redis })).singleton(),
             
-        queueEvents: asValue(new QueueEvents("order_queue"))
+        queueEvents: asFunction((redis: Redis) => new QueueEvents("order_queue", { connection: redis })).singleton()
     });
 }
