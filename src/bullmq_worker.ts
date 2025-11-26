@@ -1,6 +1,6 @@
 import { diContainer } from '@fastify/awilix';
 import { Worker } from 'bullmq';
-import { Redis } from 'ioredis';
+import Redis from 'ioredis';
 import type { Logger } from 'pino';
 import type { ExecuteOrderJobProcessor } from './application/queue_job_processors/execute_order_job_processor.js';
 
