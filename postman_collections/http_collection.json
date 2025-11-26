@@ -1,0 +1,69 @@
+{
+	"info": {
+		"_postman_id": "bc9ec120-16f3-4108-a99c-565ea9688969",
+		"name": "Eterna Assignment 1",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "14851134",
+		"_collection_link": "https://me6666-5100.postman.co/workspace/Eterna-Assignments~c5bec6d4-db14-430f-b923-59b446331d6c/collection/14851134-bc9ec120-16f3-4108-a99c-565ea9688969?action=share&source=collection_link&creator=14851134"
+	},
+	"item": [
+		{
+			"name": "Initiate Execute Order",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"tokenIn\": \"So11111111111111111111111111111111111111112\",\r\n    \"tokenInDecimal\": 9,\r\n    \"tokenOut\": \"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU\",\r\n    \"tokenOutDecimal\": 6,\r\n    \"amountIn\": \"1000000000\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{http_url}}/api/orders/execute",
+					"host": [
+						"{{http_url}}"
+					],
+					"path": [
+						"api",
+						"orders",
+						"execute"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "http_url",
+			"value": ""
+		}
+	]
+}

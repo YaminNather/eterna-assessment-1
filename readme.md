@@ -201,8 +201,13 @@ Entire infrastructure(Backend, PostgreSQL database and Redis Queue) on Render.co
 
 ## Postman Collection
 
-Import the collection from: ``
+HTTP Collection: [HTTP Collection](https://me6666-5100.postman.co/workspace/Eterna-Assignments~c5bec6d4-db14-430f-b923-59b446331d6c/collection/14851134-bc9ec120-16f3-4108-a99c-565ea9688969?action=share&creator=14851134)
+
+Websocket collection: [Webscket Collection](https://me6666-5100.postman.co/workspace/Eterna-Assignments~c5bec6d4-db14-430f-b923-59b446331d6c/collection/6923fb7eb2e648c8471e8ee0?action=share&creator=14851134)
 
 Includes:
 - Execute order endpoint with sample payloads
 - WebSocket connection examples
+
+## Proof of transaction:
+![proof.png](https://github.com/YaminNather/eterna-assessment-1/blob/main/images/proof.png)
