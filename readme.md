@@ -1,3 +1,26 @@
+# Contents
+
+1. [Overview](#eterna-backend-task---solana-dex-order-execution-engine)  
+2. [Order Type](#order-type-market-orders)  
+   - Market Orders  
+   - Extension to Other Order Types  
+3. [Architecture](#architecture)  
+   - Key Components  
+4. [Technology Stack](#technology-stack)  
+5. [Setup Instructions](#setup-instructions)  
+   - Clone & Install  
+   - Environment Configuration  
+   - Start Services  
+6. [API Documentation](#-api-documentation)  
+   - Execute Order  
+   - WebSocket Progress Stream  
+7. [Testing](#testing)  
+8. [Monitoring](#monitoring)  
+9. [Deployment](#deployment)  
+10. [Postman Collection](#postman-collection)  
+11. [Proof of Transaction](#proof-of-transactiontransaction-in-the-video-explanation-as-well)
+
+
 # Eterna Backend Task - Solana DEX Order Execution Engine 
 
 An order execution engine to place swap orders on real Solana based DEXes like Raydium and Meteora that routes to the best possible pools amongst multiple DEXes for the best value.
@@ -209,5 +232,5 @@ Includes:
 - Execute order endpoint with sample payloads
 - WebSocket connection examples
 
-## Proof of transaction:
+## Proof of transaction(Transaction in the Video Explanation as well):
 ![proof.png](https://github.com/YaminNather/eterna-assessment-1/blob/main/images/proof.png)
