@@ -24,6 +24,12 @@ export async function setupBullMQProcessor(): Promise<void> {
                 throw e;
             }
         },
-        { connection: redisConnection, concurrency: 20 },
+        { 
+            connection: redisConnection, 
+            concurrency: 20, 
+
+            lockDuration: 120000,
+            lockRenewTime: 30000,
+         },
     );
 }

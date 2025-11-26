@@ -195,13 +195,13 @@ The demo showcases:
     
 ## Deployment
 
-**Live API**: [Your Deployment URL]
+**Live API**: https://eterna-assessment-1.onrender.com
 
 Entire infrastructure(Backend, PostgreSQL database and Redis Queue) on Render.com
 
 ## Postman Collection
 
-Import the collection from: `postman_collection.json`
+Import the collection from: ``
 
 Includes:
 - Execute order endpoint with sample payloads
