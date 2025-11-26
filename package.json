@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "build": "prisma generate && tsc",
+    "build": "npm install && prisma generate && tsc",
     "start:dev": "tsx src/main.ts",
     "start:prod": "prisma db push && node dist/main.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
