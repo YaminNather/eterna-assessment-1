@@ -5,7 +5,7 @@ import type { Logger } from 'pino';
 import type { ExecuteOrderJobProcessor } from './application/queue_job_processors/execute_order_job_processor.js';
 
 export async function setupBullMQProcessor(): Promise<void> {
-    const redisConnection = new Redis({ maxRetriesPerRequest: null });
+    const redisConnection = new Redis(process.env.REDIS_URL as string, { maxRetriesPerRequest: null });
     
     new Worker(
         'order_queue', 
