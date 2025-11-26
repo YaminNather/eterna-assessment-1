@@ -2,7 +2,6 @@ import type { Job } from "bullmq";
 import { ExecuteOrderException, ExecuteOrderExceptionType, OrderExecutor, type OrderExecutorResult } from "../../domain/order_executor.js";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { wait } from "../../utils/promise_utils.js";
 import { OrderRepository } from "../../domain/order/order_repository.js";
 import { OrderFailureReason } from "../../domain/order/order.js";
 

@@ -12,13 +12,12 @@ export class OrderProgressBuffer {
     private eventBuffer: Map<string, OrderEvent[]> = new Map();
     private readonly maxEventsPerOrder = 100;
     private readonly maxAge = 5 * 60 * 1000; // 5 minutes
-    private queueEvents: QueueEvents;
     private cleanupInterval: NodeJS.Timeout;
 
     constructor(
         private readonly logger: Logger,
+        private readonly queueEvents: QueueEvents,
     ) {
-        this.queueEvents = new QueueEvents("order_queue");
         this.setupEventListeners();
         
         // Cleanup old events every minute
