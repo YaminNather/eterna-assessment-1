@@ -45,7 +45,8 @@ async function main() {
 
     fastify.register(orderRoutes, { prefix: orderRouterPrefix });
     
-    fastify.listen({port: 8080}, function (err, address) {
+    const port = process.env.PORT !== undefined ? parseInt(process.env.PORT as string) : 8080;
+    fastify.listen({port: port}, function (err, address) {
         if (err) {
             fastify.log.error({err}, "Failed to start server");
             process.exit(1);
