@@ -12,7 +12,6 @@ export function progressRouteHandler(socket: WebSocket, request: FastifyRequest)
 
     const orderId = (request.query as { order_id?: string }).order_id as string;
     
-    // First, send all buffered events for this order
     const bufferedEvents = orderProgressBuffer.getEvents(orderId);
     if (bufferedEvents.length > 0) {
         request.log.info({ orderId, count: bufferedEvents.length }, 'Sending buffered events');
@@ -30,7 +29,6 @@ export function progressRouteHandler(socket: WebSocket, request: FastifyRequest)
         }
     }
     
-    // Now listen for new events
     queueEvents.on('waiting', ({ jobId }) => {
         if (!isCurrentOrdersJob(jobId, orderId)) {
             return;

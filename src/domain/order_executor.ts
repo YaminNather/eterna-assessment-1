@@ -63,10 +63,8 @@ export class OrderExecutor {
         progressCallback(ExecuteOrderStatus.building); 
         this.logger.info({orderId, dex_id: quote.dexId, pool_id: quote.poolId, }, 'Building swap transaction');
         
-        const payer = new PublicKey("ENuSSFYwyU8Ygo1e6W2xs9ck39xNEt64yjmDMFw6JbtN");
-        const payerSecret = bs58.decode(
-            "mQfhs5hWNXQkDMp6mGRtS86VBNuMJ6FXa6hXqemasbn42atBBWrSt4kQStTgWSJziTW2pFgNYf6UFdo3aR8rb7g",
-        );
+        const payer = new PublicKey(process.env['WALLET_PUBLIC_KEY'] as string);
+        const payerSecret = bs58.decode(process.env['WALLET_SECRET_KEY'] as string);
 
         let transactionHash: string;
         try {
