@@ -4,17 +4,31 @@ import type { Quote } from "../../domain/dex/quote.js";
 import { CurveCalculator, Raydium, TxVersion } from "@raydium-io/raydium-sdk-v2";
 import BN from "bn.js";
 import { getFinalSwapAmounts } from "./utils.js";
+import { getReadableError } from "./error_parser.js";
+import { Logger } from "pino";
 
 export class RaydiumDexAdapter implements Dex {
+    private raydium: Raydium | undefined;
+
     constructor(
         private readonly connection: Connection,
-    ) {}
+        private readonly logger: Logger,
+    ) { }
+
+    private async getRaydiumInstance(): Promise<Raydium> {
+        if (!this.raydium) {
+            this.raydium = await Raydium.load({
+                connection: this.connection,
+                cluster: 'devnet',
+                disableFeatureCheck: true,
+                disableLoadToken: true,
+            });
+        }
+        return this.raydium;
+    }
 
     async getQuotes(tokenIn: PublicKey, tokenOut: PublicKey, amount: BN): Promise<Quote[]> {
-        const raydium = await Raydium.load({
-            connection: this.connection,
-            cluster: 'devnet',
-        });
+        const raydium = await this.getRaydiumInstance();
 
         const poolsBrief = (await raydium.api.fetchPoolByMints({
             mint1: tokenIn,
@@ -22,7 +36,7 @@ export class RaydiumDexAdapter implements Dex {
         }))
             .data
             .filter((e) => e.type === "Standard");
-        
+
 
         const poolIds = poolsBrief.map((e) => e.id);
         const pools = await raydium.cpmm.getRpcPoolInfos(poolIds);
@@ -41,32 +55,30 @@ export class RaydiumDexAdapter implements Dex {
                 pool.fundFeesMintA,
                 tokenIn === pool.mintA,
             );
-            
+
+            // this.logger.error({ swapResult }, "RaydiumDexAdapter.getQuotes");
+
             const quote: Quote = {
                 dexId: this.id,
                 poolId: new PublicKey(poolId),
 
                 inputAmount: swapResult.inputAmount,
-                inputAmountWithFees: swapResult.inputAmount
-                    .add(swapResult.tradeFee)
-                    .add(swapResult.fundFee)
-                    .add(swapResult.creatorFee)
-                    .add(swapResult.protocolFee),
-
                 outputAmount: swapResult.outputAmount,
-                minOutputAmount: swapResult.outputAmount,
             };
             quotes.push(quote);
         }
 
         return quotes;
     }
-    
+
     async swap(userPublicKey: PublicKey, userSecretKey: Uint8Array, poolMint: PublicKey, tokenIn: PublicKey, quote: Quote): Promise<string> {
+        // For swapping, we need to load with the owner's keypair
         const raydium = await Raydium.load({
             owner: new Keypair({ publicKey: userPublicKey.toBytes(), secretKey: userSecretKey }),
             connection: this.connection,
             cluster: 'devnet',
+            disableFeatureCheck: true,
+            disableLoadToken: true,
         });
 
         const pool = await raydium.cpmm.getPoolInfoFromRpc(quote.poolId.toBase58());
@@ -82,26 +94,35 @@ export class RaydiumDexAdapter implements Dex {
             tokenIn.toBase58() === pool.poolInfo.mintA.address,
         );
 
-        const { execute, transaction } = await raydium.cpmm.swap({
-            poolInfo: pool.poolInfo,
-            poolKeys: pool.poolKeys,
-            inputAmount: quote.inputAmount,
-            swapResult,
-            slippage: 0.005,
-            baseIn: tokenIn.toBase58() === pool.poolInfo.mintA.address,
+        try {
+            const { execute } = await raydium.cpmm.swap({
+                poolInfo: pool.poolInfo,
+                poolKeys: pool.poolKeys,
+                inputAmount: quote.inputAmount,
+                swapResult,
+                slippage: 0.005,
+                baseIn: tokenIn.toBase58() === pool.poolInfo.mintA.address,
+                txVersion: TxVersion.V0,
+            });
 
-            txVersion: TxVersion.V0,
-        });
-        
-        const { txId } = await execute();
-        
-        return txId;
+            const { txId } = await execute();
+            return txId;
+        } catch (e: any) {
+            const readableError = getReadableError(e);
+            throw new Error(`Raydium swap failed: ${readableError}`);
+        }
     }
 
-    async confirmTransaction(transactionHash: string, tokenIn: PublicKey, tokenOut: PublicKey): Promise<ConfirmationResult> {
-        await this.connection.confirmTransaction(transactionHash, "finalized");
-        
-        return await getFinalSwapAmounts(this.connection, transactionHash, tokenIn, tokenOut);
+    async confirmTransaction(transactionHash: string, tokenIn: PublicKey, tokenOut: PublicKey, owner: PublicKey): Promise<ConfirmationResult> {
+        try {
+            await this.connection.confirmTransaction(transactionHash, "finalized");
+        }
+        catch (e) {
+            const readableError = getReadableError(e);
+            throw readableError;
+        }
+
+        return await getFinalSwapAmounts(this.connection, transactionHash, tokenIn, tokenOut, owner);
     }
 
     get id(): string {

@@ -26,13 +26,16 @@ async function main() {
     fastify.register(fastifyAwilixPlugin, {
         injectionMode: "CLASSIC",
         disposeOnClose: true,
-        disposeOnResponse: true, 
+        disposeOnResponse: true,
         strictBooleanEnforced: true,
     });
     fastify.register(FastifyWebsockets);
 
     setupDiContainer();
-    
+
+    // Eagerly resolve orderProgressBuffer to start listening to events immediately
+    diContainer.resolve('orderProgressBuffer');
+
     setupBullMQProcessor();
 
     const bullMqServerAdapter = new FastifyAdapter();
@@ -41,14 +44,14 @@ async function main() {
         queues: [new BullMQAdapter(diContainer.resolve<Queue>('orderQueue'))],
         serverAdapter: bullMqServerAdapter,
     });
-    fastify.register(bullMqServerAdapter.registerPlugin(), {prefix: '/admin/queues'});
+    fastify.register(bullMqServerAdapter.registerPlugin(), { prefix: '/admin/queues' });
 
     fastify.register(orderRoutes, { prefix: orderRouterPrefix });
-    
+
     const port = process.env.PORT !== undefined ? parseInt(process.env.PORT as string) : 8080;
-    fastify.listen({port: port, host: "0.0.0.0",}, function (err, address) {
+    fastify.listen({ port: port, host: "0.0.0.0", }, function (err, address) {
         if (err) {
-            fastify.log.error({err}, "Failed to start server");
+            fastify.log.error({ err }, "Failed to start server");
             process.exit(1);
         }
     });

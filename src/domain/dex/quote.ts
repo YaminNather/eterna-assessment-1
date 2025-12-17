@@ -6,8 +6,6 @@ export interface Quote {
     readonly poolId: PublicKey;
 
     readonly inputAmount: BN;
-    readonly inputAmountWithFees: BN;
-
     readonly outputAmount: BN;
-    readonly minOutputAmount: BN;
+    readonly minOutputAmount?: BN;
 }

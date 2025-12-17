@@ -21,7 +21,7 @@ export function setupDiContainer() {
 
     diContainer.register({
         logger: asFunction<pino.Logger>(() => logger).singleton(),
-            
+
         prisma: asValue(prisma),
 
         redis: asValue<Redis>(new Redis(process.env.REDIS_URL as string, { maxRetriesPerRequest: null })),
@@ -37,10 +37,10 @@ export function setupDiContainer() {
         orderService: asClass(OrderService).singleton(),
         orderExecutor: asClass(OrderExecutor).singleton(),
         orderProgressBuffer: asClass(OrderProgressBuffer).singleton(),
-        
+
         executeOrderJobProcessor: asClass(ExecuteOrderJobProcessor),
         orderQueue: asFunction((redis: Redis) => new Queue('order_queue', { connection: redis })).singleton(),
-            
+
         queueEvents: asFunction((redis: Redis) => new QueueEvents("order_queue", { connection: redis })).singleton()
     });
 }

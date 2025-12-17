@@ -9,34 +9,57 @@ export class ExecuteOrderJobProcessor {
     constructor(
         private readonly orderExecutor: OrderExecutor,
         private readonly orderRepository: OrderRepository,
-    ) {} 
+    ) { }
 
     async executeOrder(job: Job) {
         const orderId = job.data.orderId!;
 
-        // await wait(10 * 1000);
-
-        const tokenIn = new PublicKey(job.data.tokenIn as string);
-        const tokenOut = new PublicKey(job.data.tokenOut as string);
-        const amount = new BN(job.data.amount as string, "hex");
-
-        let result: OrderExecutorResult;
         try {
-            result = await this.orderExecutor.executeOrder(orderId, tokenIn, tokenOut, amount, async (status, details) => {
+            const tokenIn = new PublicKey(job.data.tokenIn as string);
+            const tokenOut = new PublicKey(job.data.tokenOut as string);
+            const amount = new BN(job.data.amount as string, "hex");
+
+            const result = await this.orderExecutor.executeOrder(orderId, tokenIn, tokenOut, amount, async (status, details) => {
                 job.updateProgress({
                     status,
                     details,
                 });
             });
+
+            const order = (await this.orderRepository.fetchWithId(orderId))!;
+            order.markAsConfirmed(result.transactionHash, result.dexId, result.poolId, result.amountIn, result.amountOut);
+            await this.orderRepository.save(order);
+
+            return {
+                status: "confirmed",
+                details: {
+                    transactionHash: result.transactionHash,
+                    dexId: result.dexId,
+                    poolId: result.poolId.toBase58(),
+                    finalAmountIn: result.amountIn,
+                    finalAmountOut: result.amountOut,
+                },
+            };
         }
-        catch (err) {
-            if (err instanceof ExecuteOrderException) {
-                if (job.attemptsMade === 3) {
-                    const order = (await this.orderRepository.fetchWithId(orderId))!;
-                    order.markAsFailed(mapToDomainFailureReason(err.reason));
+        catch (err: any) {
+            const maxAttempts = job.opts.attempts || 1;
+            const isLastAttempt = job.attemptsMade >= (maxAttempts - 1);
+
+            if (isLastAttempt) {
+                const order = (await this.orderRepository.fetchWithId(orderId));
+                if (order) {
+                    let failureReason = OrderFailureReason.transactionFailed;
+
+                    if (err instanceof ExecuteOrderException) {
+                        failureReason = mapToDomainFailureReason(err.reason);
+                    }
+
+                    order.markAsFailed(failureReason);
                     await this.orderRepository.save(order);
                 }
+            }
 
+            if (err instanceof ExecuteOrderException) {
                 const errorMessage = JSON.stringify({
                     status: 'failed',
                     details: {
@@ -45,30 +68,11 @@ export class ExecuteOrderJobProcessor {
                         details: err.details,
                     },
                 });
-                
                 throw new Error(errorMessage);
             }
-            else if (!(err instanceof Error)) {
-                throw new Error(JSON.stringify(err as any));
-            }
 
-            throw err;
+            throw new Error(err.message || "Unknown error");
         }
-        
-        const order = (await this.orderRepository.fetchWithId(orderId))!;
-        order.markAsConfirmed(result.transactionHash, result.dexId, result.poolId, result.amountIn, result.amountOut);
-        await this.orderRepository.save(order);
-
-        return {
-            status: "confirmed",
-            details: {
-                transactionHash: result.transactionHash,
-                dexId: result.dexId,
-                poolId: result.poolId.toBase58(),
-                finalAmountIn: result.amountIn,
-                finalAmountOut: result.amountOut,
-            },
-        };
     }
 }
 
@@ -76,7 +80,7 @@ function mapToDomainFailureReason(reason: ExecuteOrderExceptionType): OrderFailu
     switch (reason) {
         case ExecuteOrderExceptionType.noPoolAvailable:
             return OrderFailureReason.noPoolsFound;
-        
+
         case ExecuteOrderExceptionType.slippage:
             return OrderFailureReason.slippage;
 

@@ -4,12 +4,15 @@ import type { Quote } from "../../domain/dex/quote.js";
 import { PublicKey, SendTransactionError, type Connection, type TransactionSignature } from "@solana/web3.js";
 import BN from "bn.js";
 import { getFinalSwapAmounts } from "./utils.js";
+import { getReadableError } from "./error_parser.js";
+import { Logger } from "pino";
 
 export class MeteoraDexAdapter implements Dex {
     private readonly cpAmm: CpAmm;
 
     constructor(
         private readonly connection: Connection,
+        private readonly logger: Logger,
     ) {
         this.cpAmm = new CpAmm(connection);
     }
@@ -21,35 +24,30 @@ export class MeteoraDexAdapter implements Dex {
     async getQuotes(tokenIn: PublicKey, tokenOut: PublicKey, amount: BN): Promise<Quote[]> {
         let poolStates = await this.cpAmm.getAllPools();
         poolStates = poolStates.filter((e) => {
-          return e.account.tokenAMint.toBase58() == tokenIn.toBase58() && e.account.tokenBMint.toBase58() == tokenOut.toBase58()
-            || e.account.tokenBMint.toBase58() == tokenOut.toBase58() && e.account.tokenAMint.toBase58() == tokenIn.toBase58();
+            return e.account.tokenAMint.toBase58() == tokenIn.toBase58() && e.account.tokenBMint.toBase58() == tokenOut.toBase58()
+                || e.account.tokenBMint.toBase58() == tokenOut.toBase58() && e.account.tokenAMint.toBase58() == tokenIn.toBase58();
         });
 
         const fetchQuotePromises = poolStates.map((e) => this.getQuote(e.account, tokenIn, amount));
         const quotes = (await Promise.all(fetchQuotePromises))
-            .map((e, index) => ({
-                dexId: this.id,
-                poolId: poolStates[index]!.publicKey,
+            .map((e, index) => {
+                // this.logger.error({ e }, "MeteoraDexAdapter.getQuotes");
 
-                inputAmount: e.excludedFeeInputAmount,
-                inputAmountWithFees: e.includedFeeInputAmount,
-                outputAmount: e.outputAmount,
-                minOutputAmount: e.minimumAmountOut,
-            } as Quote));
+                return ({
+                    dexId: this.id,
+                    poolId: poolStates[index]!.publicKey,
+
+                    inputAmount: e.excludedFeeInputAmount,
+                    outputAmount: e.outputAmount,
+                    minOutputAmount: e.minimumAmountOut,
+                } as Quote);
+            });
 
         return quotes;
     }
 
     async swap(userPublicKey: PublicKey, userSecretKey: Uint8Array, poolMint: PublicKey, tokenIn: PublicKey, quote: Quote): Promise<string> {
         const poolState = await this.cpAmm.fetchPoolState(poolMint);
-
-        const currentPoint = await getCurrentPoint(
-            this.connection,
-            poolState.activationType,
-        );
-
-        const tokenADecimal = await getTokenDecimals(this.connection, poolState.tokenAMint, getTokenProgram(poolState.tokenAFlag));
-        const tokenBDecimal = await getTokenDecimals(this.connection, poolState.tokenBMint, getTokenProgram(poolState.tokenBFlag));
 
         const inputTokenMint = poolState.tokenAMint;
         const outputTokenMint = poolState.tokenBMint;
@@ -71,8 +69,8 @@ export class MeteoraDexAdapter implements Dex {
 
             referralTokenAccount: null,
             swapMode: SwapMode.ExactIn,
-            amountIn: quote.inputAmountWithFees,
-            minimumAmountOut: quote.outputAmount,
+            amountIn: quote.inputAmount,
+            minimumAmountOut: quote.minOutputAmount!,
         });
 
         let txSignature: TransactionSignature;
@@ -80,30 +78,26 @@ export class MeteoraDexAdapter implements Dex {
             txSignature = await this.connection.sendTransaction(swapTx, [
                 { publicKey: userPublicKey, secretKey: userSecretKey },
             ]);
-        } catch (e) {
-            if (e instanceof SendTransactionError) {
-                const logs = await e.getLogs(this.connection);
-                console.log("Meteora Swap error: ", logs);
-            }
-
-            throw e;
+        } catch (e: any) {
+            const readableError = getReadableError(e);
+            throw new Error(`Meteora swap failed: ${readableError}`);
         }
-        
+
         return txSignature;
     }
 
-    async confirmTransaction(transactionHash: string, tokenIn: PublicKey, tokenOut: PublicKey): Promise<ConfirmationResult> {
+    async confirmTransaction(transactionHash: string, tokenIn: PublicKey, tokenOut: PublicKey, owner: PublicKey): Promise<ConfirmationResult> {
         await this.connection.confirmTransaction(transactionHash, "finalized");
-        
-        const { amountIn, amountOut } = await getFinalSwapAmounts(this.connection, transactionHash, tokenIn, tokenOut);
-        
+
+        const { amountIn, amountOut } = await getFinalSwapAmounts(this.connection, transactionHash, tokenIn, tokenOut, owner);
+
         return {
             amountIn,
             amountOut,
         }
     }
 
-    
+
     private async getQuote(poolState: PoolState, tokenIn: PublicKey, amountIn: BN): Promise<Quote2Result> {
         const currentPoint = await getCurrentPoint(
             this.connection,
@@ -115,7 +109,7 @@ export class MeteoraDexAdapter implements Dex {
 
         const quote = this.cpAmm.getQuote2({
             inputTokenMint: tokenIn,
-            slippage: 1,
+            slippage: 5 / 100,
             currentPoint,
             poolState,
             tokenADecimal,
