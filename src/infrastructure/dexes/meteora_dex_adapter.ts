@@ -6,6 +6,7 @@ import BN from "bn.js";
 import { getFinalSwapAmounts } from "./utils.js";
 import { getReadableError } from "./error_parser.js";
 import { Logger } from "pino";
+import { SlippageExceededError } from "#/domain/dex/errors.js";
 
 export class MeteoraDexAdapter implements Dex {
     private readonly cpAmm: CpAmm;
@@ -79,8 +80,13 @@ export class MeteoraDexAdapter implements Dex {
                 { publicKey: userPublicKey, secretKey: userSecretKey },
             ]);
         } catch (e: any) {
-            const readableError = getReadableError(e);
-            throw new Error(`Meteora swap failed: ${readableError}`);
+            if (e instanceof SendTransactionError) {
+                if (e.message.includes("custom program error: 0x1772")) {
+                    throw new SlippageExceededError({ cause: e });
+                }
+            }
+
+            throw e;
         }
 
         return txSignature;

@@ -29,7 +29,7 @@ export function setupDiContainer() {
         meteoraDexAdapter: asClass(MeteoraDexAdapter).singleton(),
         raydiumDexAdapter: asClass(RaydiumDexAdapter).singleton(),
         dexRegistry: asFunction((meteoraDexAdapter: MeteoraDexAdapter, raydiumDexAdapter: RaydiumDexAdapter) => {
-            return new DexRegistry([meteoraDexAdapter, raydiumDexAdapter]);
+            return new DexRegistry([meteoraDexAdapter]);
         }).singleton(),
         dexRouter: asClass(DexRouter).singleton(),
 

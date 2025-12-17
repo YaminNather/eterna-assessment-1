@@ -6,6 +6,7 @@ import BN from "bn.js";
 import { getFinalSwapAmounts } from "./utils.js";
 import { getReadableError } from "./error_parser.js";
 import { Logger } from "pino";
+import { SlippageExceededError } from "#/domain/dex/errors.js";
 
 export class RaydiumDexAdapter implements Dex {
     private raydium: Raydium | undefined;
@@ -118,8 +119,13 @@ export class RaydiumDexAdapter implements Dex {
             await this.connection.confirmTransaction(transactionHash, "finalized");
         }
         catch (e) {
-            const readableError = getReadableError(e);
-            throw readableError;
+            if (Array.isArray(e)) {
+                if (Object.hasOwn(e[1], 'Custom') && e[1].Custom === 6005) {
+                    throw new SlippageExceededError({ cause: e });
+                }
+            }
+
+            throw e;
         }
 
         return await getFinalSwapAmounts(this.connection, transactionHash, tokenIn, tokenOut, owner);

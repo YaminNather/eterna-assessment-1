@@ -6,7 +6,7 @@ import { PublicKey } from "@solana/web3.js";
 import bs58 from 'bs58';
 import BN from "bn.js";
 import type { Quote } from "./dex/quote.js";
-import { getReadableError } from "../infrastructure/dexes/error_parser.js";
+import { SlippageExceededError } from "./dex/errors.js";
 
 export interface OrderExecutorResult {
     readonly dexId: string;
@@ -24,23 +24,32 @@ export class OrderExecutor {
     ) { }
 
     async executeOrder(orderId: string, tokenIn: PublicKey, tokenOut: PublicKey, amount: BN, progressCallback: ExecuteOrderProgressCallback): Promise<OrderExecutorResult> {
-        const quote: Quote = await this.routeToBestPool(orderId, tokenIn, tokenOut, amount, progressCallback);
+        try {
+            const quote: Quote = await this.routeToBestPool(orderId, tokenIn, tokenOut, amount, progressCallback);
 
-        const dex: Dex = this.dexRegistry.withId(quote.dexId);
+            const dex: Dex = this.dexRegistry.withId(quote.dexId);
 
-        const transactionHash = await this.executeSwap(orderId, quote, dex, tokenIn, progressCallback);
+            const transactionHash = await this.executeSwap(orderId, quote, dex, tokenIn, progressCallback);
 
-        const payer = new PublicKey(process.env['WALLET_PUBLIC_KEY'] as string);
+            const payer = new PublicKey(process.env['WALLET_PUBLIC_KEY'] as string);
 
-        const { amountIn, amountOut } = await this.confirmSwap(orderId, transactionHash, dex, tokenIn, tokenOut, payer);
+            const { amountIn, amountOut } = await this.confirmSwap(orderId, transactionHash, dex, tokenIn, tokenOut, payer);
 
-        return {
-            dexId: dex.id,
-            poolId: quote.poolId,
-            transactionHash,
-            amountIn,
-            amountOut,
-        };
+            return {
+                dexId: dex.id,
+                poolId: quote.poolId,
+                transactionHash,
+                amountIn,
+                amountOut,
+            };
+        }
+        catch (e) {
+            if (e instanceof OrderExecutorException) {
+                throw e;
+            }
+
+            throw new OrderExecutorException(OrderExecutorExceptionType.unknown, "Unknown error");
+        }
     }
 
     private async routeToBestPool(orderId: string, tokenIn: PublicKey, tokenOut: PublicKey, amount: BN, progressCallback: ExecuteOrderProgressCallback): Promise<Quote> {
@@ -75,6 +84,11 @@ export class OrderExecutor {
         }
         catch (e) {
             this.logger.error({ orderId, err: e }, 'Failed to send swap transaction');
+
+            if (e instanceof SlippageExceededError) {
+                throw new ExecuteOrderException(ExecuteOrderExceptionType.slippage, "Slippage exceeded");
+            }
+
             throw e;
         }
         progressCallback(ExecuteOrderStatus.submitted);
@@ -90,7 +104,12 @@ export class OrderExecutor {
         }
         catch (e: any) {
             this.logger.error({ orderId, transactionHash, err: e }, 'Transaction failed');
-            throw new ExecuteOrderException(ExecuteOrderExceptionType.transactionFailed, `Transaction Failed: ${e}`);
+
+            if (e instanceof SlippageExceededError) {
+                throw new ExecuteOrderException(ExecuteOrderExceptionType.slippage, "Slippage exceeded");
+            }
+
+            throw e;
         }
         this.logger.info({ orderId, transactionHash, amountIn: confirmationResult.amountIn, amountOut: confirmationResult.amountOut }, "Swap Transaction confirmed");
 
