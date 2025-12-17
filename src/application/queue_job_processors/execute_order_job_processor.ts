@@ -1,5 +1,10 @@
 import type { Job } from "bullmq";
-import { ExecuteOrderException, ExecuteOrderExceptionType, OrderExecutor, type OrderExecutorResult } from "../../domain/order_executor.js";
+import {
+    ExecuteOrderException,
+    NoPoolAvailableException,
+    SlippageExceededException,
+    OrderExecutor,
+} from "../../domain/order_executor.js";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { OrderRepository } from "../../domain/order/order_repository.js";
@@ -19,7 +24,7 @@ export class ExecuteOrderJobProcessor {
             const tokenOut = new PublicKey(job.data.tokenOut as string);
             const amount = new BN(job.data.amount as string, "hex");
 
-            const result = await this.orderExecutor.executeOrder(orderId, tokenIn, tokenOut, amount, async (status, details) => {
+            const orderExecutionResult = await this.orderExecutor.executeOrder(orderId, tokenIn, tokenOut, amount, async (status, details) => {
                 job.updateProgress({
                     status,
                     details,
@@ -27,17 +32,17 @@ export class ExecuteOrderJobProcessor {
             });
 
             const order = (await this.orderRepository.fetchWithId(orderId))!;
-            order.markAsConfirmed(result.transactionHash, result.dexId, result.poolId, result.amountIn, result.amountOut);
+            order.markAsConfirmed(orderExecutionResult.transactionHash, orderExecutionResult.dexId, orderExecutionResult.poolId, orderExecutionResult.amountIn, orderExecutionResult.amountOut);
             await this.orderRepository.save(order);
 
             return {
                 status: "confirmed",
                 details: {
-                    transactionHash: result.transactionHash,
-                    dexId: result.dexId,
-                    poolId: result.poolId.toBase58(),
-                    finalAmountIn: result.amountIn,
-                    finalAmountOut: result.amountOut,
+                    transactionHash: orderExecutionResult.transactionHash,
+                    dexId: orderExecutionResult.dexId,
+                    poolId: orderExecutionResult.poolId.toBase58(),
+                    finalAmountIn: orderExecutionResult.amountIn,
+                    finalAmountOut: orderExecutionResult.amountOut,
                 },
             };
         }
@@ -46,12 +51,14 @@ export class ExecuteOrderJobProcessor {
             const isLastAttempt = job.attemptsMade >= (maxAttempts - 1);
 
             if (isLastAttempt) {
-                const order = (await this.orderRepository.fetchWithId(orderId));
+                const order = await this.orderRepository.fetchWithId(orderId);
                 if (order) {
                     let failureReason = OrderFailureReason.transactionFailed;
 
-                    if (err instanceof ExecuteOrderException) {
-                        failureReason = mapToDomainFailureReason(err.reason);
+                    if (err instanceof NoPoolAvailableException) {
+                        failureReason = OrderFailureReason.noPoolsFound;
+                    } else if (err instanceof SlippageExceededException) {
+                        failureReason = OrderFailureReason.slippage;
                     }
 
                     order.markAsFailed(failureReason);
@@ -63,7 +70,7 @@ export class ExecuteOrderJobProcessor {
                 const errorMessage = JSON.stringify({
                     status: 'failed',
                     details: {
-                        reason: err.reason,
+                        reason: err.constructor.name,
                         message: err.message,
                         details: err.details,
                     },
@@ -73,18 +80,5 @@ export class ExecuteOrderJobProcessor {
 
             throw new Error(err.message || "Unknown error");
         }
-    }
-}
-
-function mapToDomainFailureReason(reason: ExecuteOrderExceptionType): OrderFailureReason {
-    switch (reason) {
-        case ExecuteOrderExceptionType.noPoolAvailable:
-            return OrderFailureReason.noPoolsFound;
-
-        case ExecuteOrderExceptionType.slippage:
-            return OrderFailureReason.slippage;
-
-        case ExecuteOrderExceptionType.transactionFailed:
-            return OrderFailureReason.transactionFailed;
     }
 }

@@ -71,7 +71,7 @@ export class MeteoraDexAdapter implements Dex {
             referralTokenAccount: null,
             swapMode: SwapMode.ExactIn,
             amountIn: quote.inputAmount,
-            minimumAmountOut: quote.minOutputAmount!,
+            minimumAmountOut: quote.minOutputAmount!.add(new BN(10000)),
         });
 
         let txSignature: TransactionSignature;

@@ -7,6 +7,7 @@ import bs58 from 'bs58';
 import BN from "bn.js";
 import type { Quote } from "./dex/quote.js";
 import { SlippageExceededError } from "./dex/errors.js";
+import { getReadableError } from "../infrastructure/dexes/error_parser.js";
 
 export interface OrderExecutorResult {
     readonly dexId: string;
@@ -43,12 +44,12 @@ export class OrderExecutor {
                 amountOut,
             };
         }
-        catch (e) {
-            if (e instanceof OrderExecutorException) {
+        catch (e: any) {
+            if (e instanceof ExecuteOrderException) {
                 throw e;
             }
 
-            throw new OrderExecutorException(OrderExecutorExceptionType.unknown, "Unknown error");
+            throw new TransactionFailedException("Unknown error", e instanceof Error ? e : new Error(String(e)));
         }
     }
 
@@ -60,7 +61,7 @@ export class OrderExecutor {
         quote = await this.dexRouter.findBestValueDexForOrder(tokenIn, tokenOut, amount);
 
         if (!quote) {
-            const error = new ExecuteOrderException(ExecuteOrderExceptionType.noPoolAvailable, "Could not find a pool meeting requirements");
+            const error = new NoPoolAvailableException("Could not find a pool meeting requirements");
             this.logger.error({ orderId, err: error }, error.message);
 
             throw error;
@@ -86,7 +87,7 @@ export class OrderExecutor {
             this.logger.error({ orderId, err: e }, 'Failed to send swap transaction');
 
             if (e instanceof SlippageExceededError) {
-                throw new ExecuteOrderException(ExecuteOrderExceptionType.slippage, "Slippage exceeded");
+                throw new SlippageExceededException("Slippage exceeded", e);
             }
 
             throw e;
@@ -106,10 +107,11 @@ export class OrderExecutor {
             this.logger.error({ orderId, transactionHash, err: e }, 'Transaction failed');
 
             if (e instanceof SlippageExceededError) {
-                throw new ExecuteOrderException(ExecuteOrderExceptionType.slippage, "Slippage exceeded");
+                throw new SlippageExceededException("Slippage exceeded", e);
             }
 
-            throw e;
+            const readableError = getReadableError(e);
+            throw new TransactionFailedException(`Transaction Failed: ${readableError}`, e);
         }
         this.logger.info({ orderId, transactionHash, amountIn: confirmationResult.amountIn, amountOut: confirmationResult.amountOut }, "Swap Transaction confirmed");
 
@@ -128,18 +130,30 @@ export enum ExecuteOrderStatus {
     submitted = 'submitted',
 }
 
-export enum ExecuteOrderExceptionType {
-    noPoolAvailable = "no_pool_available",
-    slippage = "slippage",
-    transactionFailed = "transaction_failed",
-}
-
-export class ExecuteOrderException extends Error {
+export abstract class ExecuteOrderException extends Error {
     constructor(
-        readonly reason: ExecuteOrderExceptionType,
         message: string,
+        readonly cause?: Error,
         readonly details?: any,
     ) {
         super(message);
+    }
+}
+
+export class NoPoolAvailableException extends ExecuteOrderException {
+    constructor(message: string = "Could not find a pool meeting requirements", details?: any) {
+        super(message, undefined, details);
+    }
+}
+
+export class SlippageExceededException extends ExecuteOrderException {
+    constructor(message: string = "Slippage exceeded", cause?: Error, details?: any) {
+        super(message, cause, details);
+    }
+}
+
+export class TransactionFailedException extends ExecuteOrderException {
+    constructor(message: string, cause?: Error, details?: any) {
+        super(message, cause, details);
     }
 }
