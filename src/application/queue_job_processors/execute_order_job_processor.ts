@@ -1,4 +1,4 @@
-import type { Job } from "bullmq";
+import { UnrecoverableError, type Job } from "bullmq";
 import {
     ExecuteOrderException,
     NoPoolAvailableException,
@@ -78,7 +78,7 @@ export class ExecuteOrderJobProcessor {
                 throw new Error(errorMessage);
             }
 
-            throw new Error(err.message || "Unknown error");
+            throw new UnrecoverableError(err.message || "Unknown error");
         }
     }
 }
