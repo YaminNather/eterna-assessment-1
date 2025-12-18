@@ -91,7 +91,7 @@ describe('Order', () => {
       expect(order.transactionHash).toBe(transactionHash);
       expect(order.dexId).toBe(dexId);
       expect(order.poolId).toEqual(poolId);
-      expect(order.amountIn).toEqual(finalAmountIn);
+      expect(order.finalAmountIn).toEqual(finalAmountIn);
       expect(order.finalAmountOut).toEqual(finalAmountOut);
       expect(order.confirmedAt).toBeDefined();
       expect(order.confirmedAt!.getTime()).toBeGreaterThanOrEqual(beforeTime);

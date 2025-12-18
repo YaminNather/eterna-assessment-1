@@ -11,7 +11,7 @@ describe('DexRouter', () => {
   let mockDexRegistry: DexRegistry;
   let mockDex1: jest.Mocked<Dex>;
   let mockDex2: jest.Mocked<Dex>;
-  
+
   const tokenIn = new PublicKey('So11111111111111111111111111111111111111112');
   const tokenOut = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
   const amount = new BN(1000000);
@@ -41,7 +41,6 @@ describe('DexRouter', () => {
         dexId: 'raydium',
         poolId: new PublicKey('11111111111111111111111111111112'),
         inputAmount: new BN(1000000),
-        inputAmountWithFees: new BN(1005000),
         outputAmount: new BN(500000),
         minOutputAmount: new BN(495000),
       };
@@ -50,7 +49,6 @@ describe('DexRouter', () => {
         dexId: 'meteora',
         poolId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
         inputAmount: new BN(1000000),
-        inputAmountWithFees: new BN(1003000),
         outputAmount: new BN(520000),
         minOutputAmount: new BN(515000),
       };
@@ -79,7 +77,6 @@ describe('DexRouter', () => {
         dexId: 'raydium',
         poolId: new PublicKey('11111111111111111111111111111112'),
         inputAmount: new BN(1000000),
-        inputAmountWithFees: new BN(1005000),
         outputAmount: new BN(500000),
         minOutputAmount: new BN(495000),
       };
@@ -101,7 +98,6 @@ describe('DexRouter', () => {
         dexId: 'raydium',
         poolId: new PublicKey('11111111111111111111111111111112'),
         inputAmount: new BN(1000000),
-        inputAmountWithFees: new BN(1005000),
         outputAmount: new BN(500000),
         minOutputAmount: new BN(495000),
       };
@@ -110,7 +106,6 @@ describe('DexRouter', () => {
         dexId: 'raydium',
         poolId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
         inputAmount: new BN(1000000),
-        inputAmountWithFees: new BN(1003000),
         outputAmount: new BN(510000),
         minOutputAmount: new BN(505000),
       };
@@ -128,13 +123,12 @@ describe('DexRouter', () => {
         dexId: 'raydium',
         poolId: new PublicKey('11111111111111111111111111111111'),
         inputAmount: new BN(1000000),
-        inputAmountWithFees: new BN(1005000),
         outputAmount: new BN(500000),
         minOutputAmount: new BN(495000),
       };
 
       mockDex1.getQuotes.mockResolvedValue([quote1]);
-      mockDex2.getQuotes.mockImplementation(() => 
+      mockDex2.getQuotes.mockImplementation(() =>
         new Promise((resolve) => setTimeout(() => resolve([]), 15000))
       );
 
@@ -148,7 +142,6 @@ describe('DexRouter', () => {
         dexId: 'raydium',
         poolId: new PublicKey('11111111111111111111111111111112'),
         inputAmount: new BN(1000000),
-        inputAmountWithFees: new BN(1005000),
         outputAmount: new BN(500000),
         minOutputAmount: new BN(495000),
       };
@@ -157,7 +150,6 @@ describe('DexRouter', () => {
         dexId: 'meteora',
         poolId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
         inputAmount: new BN(1000000),
-        inputAmountWithFees: new BN(1003000),
         outputAmount: new BN(500001),
         minOutputAmount: new BN(495001),
       };
