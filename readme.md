@@ -98,10 +98,13 @@ src
 
 ### Key Components
 - **DEX**: A flexible DEX interface to allow for a modular system that allows easily extending it with new DEXes. 
-- **DEX Router**: Fetches quotes from multiple DEXs and selects the best price
-- **Order Executor**: Manages the complete order lifecycle from routing to confirmation
-- **Queue System**: BullMQ-based concurrent processing with retry logic
+- **DEX Router**: Fetches quotes from multiple DEXs and selects the best price, easily extendable with new DEXes when needed.
+- **Order Executor**: Manages the complete order lifecycle from routing to confirmation, with callback for status updates.
+- **Queue System**: BullMQ-based concurrent processing with exponential backoff retry logic upto 3 times.
 - **WebSocket Streaming**: Real-time order status updates
+- **PostgreSQL bookkeeping**: Order history and status updates stored within PostgreSQL database
+- **Dependency Inversion and Dependency Injection**: Fully utilized Depdency Injection and Inversion for a flexible and testable architecture
+- **Logging**: Structured Logging using Pino for observability
 
 ## Technology Stack
 - Runtime and Language - NodeJS and Typescript
