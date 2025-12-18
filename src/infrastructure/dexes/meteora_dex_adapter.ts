@@ -20,7 +20,11 @@ export class MeteoraDexAdapter implements Dex {
     }
 
     async getQuotes(tokenIn: PublicKey, tokenOut: PublicKey, amount: BN): Promise<Quote[]> {
-        let poolStates = await this.cpAmm.getAllPools();
+        let unmergedPoolStates = await Promise.all([
+            this.cpAmm.fetchPoolStatesByTokenAMint(tokenIn),
+            this.cpAmm.fetchPoolStatesByTokenAMint(tokenOut),
+        ]);
+        let poolStates = unmergedPoolStates.flat();
         poolStates = poolStates.filter((e) => {
             return e.account.tokenAMint.toBase58() == tokenIn.toBase58() && e.account.tokenBMint.toBase58() == tokenOut.toBase58()
                 || e.account.tokenBMint.toBase58() == tokenOut.toBase58() && e.account.tokenAMint.toBase58() == tokenIn.toBase58();
