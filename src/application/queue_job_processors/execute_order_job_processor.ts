@@ -1,4 +1,4 @@
-import { UnrecoverableError, type Job } from "bullmq";
+import { type Job } from "bullmq";
 import {
     ExecuteOrderException,
     NoPoolAvailableException,
@@ -25,7 +25,7 @@ export class ExecuteOrderJobProcessor {
             const amount = new BN(job.data.amount as string, "hex");
 
             const orderExecutionResult = await this.orderExecutor.executeOrder(orderId, tokenIn, tokenOut, amount, async (status, details) => {
-                job.updateProgress({
+                await job.updateProgress({
                     status,
                     details,
                 });
@@ -78,7 +78,7 @@ export class ExecuteOrderJobProcessor {
                 throw new Error(errorMessage);
             }
 
-            throw new UnrecoverableError(err.message || "Unknown error");
+            throw new Error(err.message || "Unknown error");
         }
     }
 }

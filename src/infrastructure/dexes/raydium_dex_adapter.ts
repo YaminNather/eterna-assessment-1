@@ -6,7 +6,7 @@ import BN from "bn.js";
 import { getFinalSwapAmounts } from "./utils.js";
 import { getReadableError } from "./error_parser.js";
 import { Logger } from "pino";
-import { SlippageExceededError } from "#/domain/dex/errors.js";
+import { SlippageExceededError } from "../../domain/dex/errors.js";
 
 export class RaydiumDexAdapter implements Dex {
     private raydium: Raydium | undefined;

@@ -4,7 +4,7 @@ import type { Quote } from "../../domain/dex/quote.js";
 import { PublicKey, SendTransactionError, type Connection, type TransactionSignature } from "@solana/web3.js";
 import BN from "bn.js";
 import { getFinalSwapAmounts } from "./utils.js";
-import { SlippageExceededError } from "#/domain/dex/errors.js";
+import { SlippageExceededError } from "../../domain/dex/errors.js";
 
 export class MeteoraDexAdapter implements Dex {
     private readonly cpAmm: CpAmm;

@@ -11,11 +11,11 @@ export function progressRouteHandler(socket: WebSocket, request: FastifyRequest)
     const orderProgressBuffer = diContainer.resolve<OrderProgressBuffer>('orderProgressBuffer');
 
     const orderId = (request.query as { order_id?: string }).order_id as string;
-    
+
     const bufferedEvents = orderProgressBuffer.getEvents(orderId);
     if (bufferedEvents.length > 0) {
         request.log.info({ orderId, count: bufferedEvents.length }, 'Sending buffered events');
-        
+
         for (const event of bufferedEvents) {
             try {
                 if (event.type === 'failed') {
@@ -28,45 +28,48 @@ export function progressRouteHandler(socket: WebSocket, request: FastifyRequest)
             }
         }
     }
-    
-    queueEvents.on('waiting', ({ jobId }) => {
-        if (!isCurrentOrdersJob(jobId, orderId)) {
-            return;
-        }
 
+    const isCurrentOrdersJob = (jobId: string) => jobId === `execute_order_${orderId}`;
+
+    const onWaiting = ({ jobId }: { jobId: string }) => {
+        if (!isCurrentOrdersJob(jobId)) return;
         const message = JSON.stringify({
             status: 'pending',
         });
-        return socket.send(message);
-    });
+        socket.send(message);
+    };
 
-    queueEvents.on('progress', ({ jobId, data }) => {
-        if (!isCurrentOrdersJob(jobId, orderId)) {
-            return;
-        }
-        
+    const onProgress = ({ jobId, data }: { jobId: string; data: any }) => {
+        if (!isCurrentOrdersJob(jobId)) return;
         socket.send(JSON.stringify(data));
-    });
-    
-    queueEvents.on('failed', ({ jobId, failedReason }) => {
-        if (!isCurrentOrdersJob(jobId, orderId)) {
-            return;
-        }
+    };
 
+    const onFailed = ({ jobId, failedReason }: { jobId: string; failedReason: string }) => {
+        if (!isCurrentOrdersJob(jobId)) return;
         socket.send(failedReason);
         socket.close();
-    });
+        cleanup();
+    };
 
-    queueEvents.on('completed', ({ jobId, returnvalue }) => {
-        if (!isCurrentOrdersJob(jobId, orderId)) {
-            return;
-        }
-
+    const onCompleted = ({ jobId, returnvalue }: { jobId: string; returnvalue: any }) => {
+        if (!isCurrentOrdersJob(jobId)) return;
         socket.send(JSON.stringify(returnvalue));
         socket.close();
-    });
-}
+        cleanup();
+    };
 
-function isCurrentOrdersJob(jobId: string, orderId: string) {
-    return jobId === `execute_order_${orderId}`;
+    const cleanup = () => {
+        queueEvents.off('waiting', onWaiting);
+        queueEvents.off('progress', onProgress);
+        queueEvents.off('failed', onFailed);
+        queueEvents.off('completed', onCompleted);
+    };
+
+    queueEvents.on('waiting', onWaiting);
+    queueEvents.on('progress', onProgress);
+    queueEvents.on('failed', onFailed);
+    queueEvents.on('completed', onCompleted);
+
+    socket.on('close', cleanup);
+    socket.on('error', cleanup);
 }
