@@ -36,14 +36,62 @@ The need to route to the best DEXes by comparing the current prices of pools in 
 
 ## Architecture
 
-The application's architecture is based on idiomatic way to implement lean Architecture for backend applications. The typical layers and their purpose is listed below:
+The application's architecture is based on idiomatic way to implement clean Architecture for backend applications. The typical layers and their purpose is listed below:
 
 ```
-src/
-├── api/                    # HTTP & WebSocket endpoints
-├── application/            # Application services & queue processors
-├── domain/                 # Core business logic (DEX routing, order execution)
-├── infrastructure/         # External integrations (Raydium, Meteora, DB)
+src
+│   bullmq_worker.ts
+│   di_container.ts
+│   logger.ts
+│   main.ts
+│   prisma.ts
+│
+├───api                         # API Layer contains all the routes and other Rest API concerns
+│   └───routes
+│       └───orders
+│               execute.ts
+│               progress.ts
+│               router.ts
+│
+├───application                 # Application Layer contains orchestration concerns like services and job processors
+│   ├───queue_job_processors
+│   │       execute_order_job_processor.ts
+│   │
+│   └───services
+│           order_progress_buffer.ts
+│           order_service.ts
+│
+├───domain                      # Domain layer contains domain-related concerns like the DEX interface, order executor, order repository, etc.
+│   │   dex_registry.ts
+│   │   dex_router.ts
+│   │   order_executor.ts
+│   │
+│   ├───dex                   
+│   │       dex.ts
+│   │       errors.ts
+│   │       quote.ts
+│   │
+│   ├───order
+│   │   │   order.ts
+│   │   │   order_repository.ts
+│   │   │
+│   │   └───__tests__
+│   │           order.test.ts
+│   │
+│   └───__tests__
+│           dex_router.test.ts
+│           order_executor.test.ts
+│
+│
+├───infrastructure               # Infrastructure layer contains all the infrastructure-related concerns like the implementation for the DEXs, order repository implementations, etc.
+│   ├───dexes
+│   │       meteora_dex_adapter.ts
+│   │       raydium_dex_adapter.ts
+│   │
+│   └───repositories
+│       └───order_repository
+│               prisma_order_repository.ts
+
 ```
 
 ### Key Components
