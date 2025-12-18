@@ -72,7 +72,7 @@ export class RaydiumDexAdapter implements Dex {
         return quotes;
     }
 
-    async swap(userPublicKey: PublicKey, userSecretKey: Uint8Array, poolMint: PublicKey, tokenIn: PublicKey, quote: Quote): Promise<string> {
+    async swap(userPublicKey: PublicKey, userSecretKey: Uint8Array, poolMint: PublicKey, tokenIn: PublicKey, tokenOut: PublicKey, quote: Quote): Promise<string> {
         // For swapping, we need to load with the owner's keypair
         const raydium = await Raydium.load({
             owner: new Keypair({ publicKey: userPublicKey.toBytes(), secretKey: userSecretKey }),

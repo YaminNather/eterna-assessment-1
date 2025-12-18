@@ -9,7 +9,7 @@ import { Connection } from '@solana/web3.js';
 import { logger } from './logger.js';
 import type pino from 'pino';
 import { OrderService } from './application/services/order_service.js';
-import { Queue, QueueEvents, RedisConnection } from 'bullmq';
+import { Queue, QueueEvents } from 'bullmq';
 import { ExecuteOrderJobProcessor } from './application/queue_job_processors/execute_order_job_processor.js';
 import { RaydiumDexAdapter } from './infrastructure/dexes/raydium_dex_adapter.js';
 import { prisma } from './prisma.js';
@@ -29,7 +29,7 @@ export function setupDiContainer() {
         meteoraDexAdapter: asClass(MeteoraDexAdapter).singleton(),
         raydiumDexAdapter: asClass(RaydiumDexAdapter).singleton(),
         dexRegistry: asFunction((meteoraDexAdapter: MeteoraDexAdapter, raydiumDexAdapter: RaydiumDexAdapter) => {
-            return new DexRegistry([meteoraDexAdapter]);
+            return new DexRegistry([meteoraDexAdapter, raydiumDexAdapter]);
         }).singleton(),
         dexRouter: asClass(DexRouter).singleton(),
 

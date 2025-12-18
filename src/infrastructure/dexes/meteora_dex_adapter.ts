@@ -4,8 +4,6 @@ import type { Quote } from "../../domain/dex/quote.js";
 import { PublicKey, SendTransactionError, type Connection, type TransactionSignature } from "@solana/web3.js";
 import BN from "bn.js";
 import { getFinalSwapAmounts } from "./utils.js";
-import { getReadableError } from "./error_parser.js";
-import { Logger } from "pino";
 import { SlippageExceededError } from "#/domain/dex/errors.js";
 
 export class MeteoraDexAdapter implements Dex {
@@ -13,7 +11,6 @@ export class MeteoraDexAdapter implements Dex {
 
     constructor(
         private readonly connection: Connection,
-        private readonly logger: Logger,
     ) {
         this.cpAmm = new CpAmm(connection);
     }
@@ -47,11 +44,8 @@ export class MeteoraDexAdapter implements Dex {
         return quotes;
     }
 
-    async swap(userPublicKey: PublicKey, userSecretKey: Uint8Array, poolMint: PublicKey, tokenIn: PublicKey, quote: Quote): Promise<string> {
+    async swap(userPublicKey: PublicKey, userSecretKey: Uint8Array, poolMint: PublicKey, tokenIn: PublicKey, tokenOut: PublicKey, quote: Quote): Promise<string> {
         const poolState = await this.cpAmm.fetchPoolState(poolMint);
-
-        const inputTokenMint = poolState.tokenAMint;
-        const outputTokenMint = poolState.tokenBMint;
 
         const swapTx = await this.cpAmm.swap2({
             payer: userPublicKey,
@@ -65,13 +59,13 @@ export class MeteoraDexAdapter implements Dex {
             tokenBMint: poolState.tokenBMint,
             tokenBProgram: getTokenProgram(poolState.tokenBFlag),
 
-            inputTokenMint: inputTokenMint,
-            outputTokenMint: outputTokenMint,
+            inputTokenMint: tokenIn,
+            outputTokenMint: tokenOut,
 
             referralTokenAccount: null,
             swapMode: SwapMode.ExactIn,
             amountIn: quote.inputAmount,
-            minimumAmountOut: quote.minOutputAmount!.add(new BN(10000)),
+            minimumAmountOut: quote.minOutputAmount!,
         });
 
         let txSignature: TransactionSignature;

@@ -30,10 +30,9 @@ export class OrderExecutor {
 
             const dex: Dex = this.dexRegistry.withId(quote.dexId);
 
-            const transactionHash = await this.executeSwap(orderId, quote, dex, tokenIn, progressCallback);
+            const transactionHash = await this.executeSwap(orderId, quote, dex, tokenIn, tokenOut, progressCallback);
 
             const payer = new PublicKey(process.env['WALLET_PUBLIC_KEY'] as string);
-
             const { amountIn, amountOut } = await this.confirmSwap(orderId, transactionHash, dex, tokenIn, tokenOut, payer);
 
             return {
@@ -72,7 +71,7 @@ export class OrderExecutor {
         return quote;
     }
 
-    private async executeSwap(orderId: string, quote: Quote, dex: Dex, tokenIn: PublicKey, progressCallback: ExecuteOrderProgressCallback): Promise<string> {
+    private async executeSwap(orderId: string, quote: Quote, dex: Dex, tokenIn: PublicKey, tokenOut: PublicKey, progressCallback: ExecuteOrderProgressCallback): Promise<string> {
         progressCallback(ExecuteOrderStatus.building);
         this.logger.info({ orderId, dex_id: quote.dexId, pool_id: quote.poolId, }, 'Building swap transaction');
 
@@ -81,7 +80,7 @@ export class OrderExecutor {
 
         let transactionHash: string;
         try {
-            transactionHash = await dex.swap(payer, payerSecret, new PublicKey(quote.poolId), new PublicKey(tokenIn), quote);
+            transactionHash = await dex.swap(payer, payerSecret, new PublicKey(quote.poolId), tokenIn, tokenOut, quote);
         }
         catch (e) {
             this.logger.error({ orderId, err: e }, 'Failed to send swap transaction');

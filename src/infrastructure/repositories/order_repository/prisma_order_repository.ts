@@ -13,7 +13,7 @@ import BN from "bn.js";
 export class PrismaOrderRepository implements OrderRepository {
     constructor(
         private readonly prisma: PrismaClient,
-    ) {}
+    ) { }
 
     async fetchWithId(id: string): Promise<Order | null> {
         const dbModel = await this.prisma.swapOrder.findUnique({
@@ -67,7 +67,7 @@ export class PrismaOrderRepository implements OrderRepository {
 
                 amountIn: BigInt(order.amountIn.toString()),
 
-                transactionHash: order.transactionHash || null,
+                transactionHash: order.transactionHash,
                 dexId: order.dexId ? mapDexToDb(order.dexId) : null,
                 poolId: order.poolId ? order.poolId.toBase58() : null,
                 finalAmountIn: order.finalAmountIn ? BigInt(order.finalAmountIn.toString()) : null,
@@ -101,7 +101,7 @@ function mapOrderStatusToDb(domainModel: OrderStatus): OrderStatusDb {
     switch (domainModel) {
         case OrderStatus.confirmed:
             return OrderStatusDb.CONFIRMED;
-        
+
         case OrderStatus.failed:
             return OrderStatusDb.FAILED;
 
@@ -149,7 +149,7 @@ function mapDexToDb(domain: string): Dex {
             return Dex.METEORA;
         case "raydium":
             return Dex.RAYDIUM;
-        
+
         default:
             throw new Error(`Invalid dex id ${domain}`);
     }

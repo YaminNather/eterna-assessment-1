@@ -7,7 +7,7 @@ export abstract class Dex {
 
     abstract getQuotes(tokenIn: PublicKey, tokenOut: PublicKey, amount: BN): Promise<Quote[]>
 
-    abstract swap(userPublicKey: PublicKey, userSecretKey: Uint8Array, poolMint: PublicKey, tokenIn: PublicKey, quote: Quote): Promise<string>
+    abstract swap(userPublicKey: PublicKey, userSecretKey: Uint8Array, poolMint: PublicKey, tokenIn: PublicKey, tokenOut: PublicKey, quote: Quote): Promise<string>
 
     abstract confirmTransaction(transactionHash: string, tokenIn: PublicKey, tokenOut: PublicKey, owner: PublicKey): Promise<ConfirmationResult>
 }

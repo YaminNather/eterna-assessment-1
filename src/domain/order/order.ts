@@ -3,7 +3,7 @@ import type BN from "bn.js";
 
 export class Order {
     readonly id: string;
-    
+
     status: OrderStatus;
 
     readonly tokenIn: PublicKey;
@@ -12,7 +12,7 @@ export class Order {
     readonly tokenOutDecimal: number;
 
     amountIn: BN;
-    
+
     transactionHash: string | undefined;
     dexId: string | undefined;
     poolId: PublicKey | undefined;
@@ -25,7 +25,7 @@ export class Order {
 
     constructor(opts: {
         id: string,
-        
+
         status: OrderStatus,
 
         tokenIn: PublicKey,
@@ -34,7 +34,7 @@ export class Order {
         tokenOutDecimal: number,
 
         amountIn: BN,
-        
+
         transactionHash: string | undefined,
         dexId: string | undefined,
         poolId: PublicKey | undefined,
@@ -44,32 +44,32 @@ export class Order {
         confirmedAt: Date | undefined,
         failureReason: OrderFailureReason | undefined,
     }) {
-        this.id =  opts.id;
-        
-        this.status =  opts.status;
+        this.id = opts.id;
 
-        this.tokenIn =  opts.tokenIn;
-        this.tokenInDecimal =  opts.tokenInDecimal;
-        this.tokenOut =  opts.tokenOut;
-        this.tokenOutDecimal =  opts.tokenOutDecimal;
+        this.status = opts.status;
 
-        this.amountIn =  opts.amountIn;
-        
+        this.tokenIn = opts.tokenIn;
+        this.tokenInDecimal = opts.tokenInDecimal;
+        this.tokenOut = opts.tokenOut;
+        this.tokenOutDecimal = opts.tokenOutDecimal;
+
+        this.amountIn = opts.amountIn;
+
         this.transactionHash = opts.transactionHash;
-        this.dexId =  opts.dexId;
-        this.poolId =  opts.poolId;
+        this.dexId = opts.dexId;
+        this.poolId = opts.poolId;
         this.finalAmountIn = opts.finalAmountIn;
-        this.finalAmountOut =  opts.finalAmountOut;
+        this.finalAmountOut = opts.finalAmountOut;
 
 
-        this.confirmedAt =  opts.confirmedAt;
-        this.failureReason =  opts.failureReason;
+        this.confirmedAt = opts.confirmedAt;
+        this.failureReason = opts.failureReason;
     }
 
     static create(id: string, tokenIn: PublicKey, tokenInDecimal: number, tokenOut: PublicKey, tokenOutDecimal: number, amountIn: BN) {
         return new Order({
             id: id,
-            
+
             status: OrderStatus.pending,
 
             tokenIn: tokenIn,
@@ -78,7 +78,7 @@ export class Order {
             tokenOutDecimal: tokenOutDecimal,
 
             amountIn: amountIn,
-            
+
             transactionHash: undefined,
             dexId: undefined,
             poolId: undefined,
@@ -95,13 +95,13 @@ export class Order {
         if (this.status !== OrderStatus.pending) {
             throw new OrderAlreadyCompletedException();
         }
-        
+
         this.transactionHash = transactionHash;
         this.dexId = dexId;
         this.poolId = poolId;
-        this.amountIn = amountIn;
+        this.finalAmountIn = amountIn;
         this.finalAmountOut = amountOut;
-        
+
         this.confirmedAt = new Date(Date.now());
 
         this.status = OrderStatus.confirmed;
